@@ -3,6 +3,8 @@ package Yearly
 import (
 	"sort"
 	"time"
+
+	"github.com/ridhdhish-desai-zs/datetime/Monthly"
 )
 
 type timeSlice []time.Time
@@ -11,41 +13,8 @@ func (s timeSlice) Less(i, j int) bool { return s[i].Before(s[j]) }
 func (s timeSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s timeSlice) Len() int           { return len(s) }
 
-func getMonthDate(hrs, mins, day, month, interval int, startDate, endDate time.Time) *time.Time {
-	var nextDate time.Time
-	nextDate = startDate
-
-	diffOfDays := day - int(startDate.Day())
-	diffOfMonths := month - int(startDate.Month())
-
-	if diffOfMonths == 0 {
-		if diffOfDays == 0 {
-			minutes := startDate.Hour()*60 + startDate.Minute()
-			requiredMinutes := hrs*60 + mins
-			if minutes > requiredMinutes {
-				nextDate = startDate.AddDate(0, interval, 0)
-			}
-		}
-
-		if diffOfDays < 0 {
-			nextDate = startDate.AddDate(0, interval, 0)
-		}
-	} else if diffOfMonths < 0 {
-		nextDate = startDate.AddDate(0, interval, 0)
-	}
-
-	nextDate = nextDate.AddDate(0, diffOfMonths, diffOfDays)
-	nextDate = nextDate.Add(time.Second * time.Duration(0-nextDate.Second()))
-	nextDate = nextDate.Add(time.Minute * time.Duration(mins-nextDate.Minute()))
-	nextDate = nextDate.Add(time.Hour * time.Duration(hrs-nextDate.Hour()))
-
-	if endDate.Sub(nextDate) < 0 || (month != int(nextDate.Month())) {
-		return nil
-	}
-
-	return &nextDate
-}
-
+// Calculate next occurrences (other than first occurrences) and returns
+// all possible occurrences (at max 10)
 func GetNextDues(interval int, endDate time.Time, firstDateOccurrence timeSlice) timeSlice {
 	var nextDues timeSlice
 	nextDues = append(nextDues, firstDateOccurrence...)
@@ -77,12 +46,14 @@ func GetNextDues(interval int, endDate time.Time, firstDateOccurrence timeSlice)
 	}
 }
 
+// Returns first occurrence
+// Here startDate contains currentDate or given task startDate (whichever is greater)
 func GetFirstDateOccurrence(hrs, mins, interval int, startDate, endDate time.Time, dates, months []int) timeSlice {
 	var firstDateOccurrence timeSlice
 
 	for _, v := range dates {
 		for _, m := range months {
-			nextDate := getMonthDate(hrs, mins, v, m, interval, startDate, endDate)
+			nextDate := Monthly.GetMonthDate(hrs, mins, v, m, interval, startDate, endDate)
 
 			if nextDate != nil {
 				firstDateOccurrence = append(firstDateOccurrence, *nextDate)

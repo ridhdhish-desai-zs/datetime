@@ -13,37 +13,37 @@ import (
 )
 
 // Returns days/dates/months with [interval]
-func getParams(val string) (*[]int, *int) {
-	params := strings.Split(val, "/")
+func getParams(input string) ([]int, *int) {
+	params := strings.Split(input, "/")
 
-	var daysOfTheWeek []int
+	var values []int // stores days/dates/months
 	var interval int
 
-	week := params[0]
+	inputValues := params[0]
 
-	if week != "*" {
-		if week[:1] == "(" {
-			between := strings.Split(week[1:len(week)-1], "-")
+	if inputValues != "*" {
+		if inputValues[:1] == "(" {
+			between := strings.Split(inputValues[1:len(inputValues)-1], "-")
 			from, _ := strconv.Atoi(between[0])
 			to, _ := strconv.Atoi(between[1])
 
 			for i := from; i <= to; i++ {
-				daysOfTheWeek = append(daysOfTheWeek, i)
+				values = append(values, i)
 			}
 		} else {
-			days := strings.Split(week, ",")
+			days := strings.Split(inputValues, ",")
 
 			for _, v := range days {
 				val, _ := strconv.Atoi(v)
-				daysOfTheWeek = append(daysOfTheWeek, val)
+				values = append(values, val)
 			}
 		}
 
 		if len(params) > 1 {
 			interval, _ = strconv.Atoi(params[1])
-			return &daysOfTheWeek, &interval
+			return values, &interval
 		} else {
-			return &daysOfTheWeek, nil
+			return values, nil
 		}
 	} else {
 		if len(params) > 1 {
@@ -55,7 +55,8 @@ func getParams(val string) (*[]int, *int) {
 	}
 }
 
-func checkRecurrenceType(weekDays, dates, daily, months *[]int, weekInterval, datesInterval, dailyInterval, monthInterval *int) string {
+// Returns which type of recurrence is: daily/weekly/monthly/yearly
+func checkRecurrenceType(weekDays, dates, daily, months []int, weekInterval, datesInterval, dailyInterval, monthInterval *int) string {
 	// Weekly occurrence
 	if weekDays != nil || weekInterval != nil {
 		if dates != nil || months != nil {
@@ -86,22 +87,21 @@ func checkRecurrenceType(weekDays, dates, daily, months *[]int, weekInterval, da
 }
 
 func main() {
-	// regex := "00 16 1,2,6/2 * *"
-	// regex := "00 16 * 1 */10"
-	regex := "00 00 * 1 4/120"
-	// regex := "00 16 * */10 *"
+	// regex := "00 16 * */10 *" // Daily
+	// regex := "00 16 1,2,6/2 * *" // Weekly
+	// regex := "00 16 * 1 */1" // Monthly
+	regex := "00 00 * 1 4/120" // Yearly
 
 	regexParams := strings.Split(regex, " ")
 
 	weekDays, weekInterval := getParams(regexParams[2])
-	daily, dailyInterval := getParams(regexParams[3])
 	dates, datesInterval := getParams(regexParams[3])
 	months, monthInterval := getParams(regexParams[4])
 
 	hours, _ := strconv.Atoi(regexParams[1])
 	minutes, _ := strconv.Atoi(regexParams[0])
 
-	endDate, _ := time.Parse(time.RFC3339, "2022-04-23T10:00:00Z")
+	endDate, _ := time.Parse(time.RFC3339, "2032-04-23T10:00:00Z")
 	startDate, _ := time.Parse(time.RFC3339, "2022-02-28T15:00:00Z")
 	currentDate, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
@@ -109,25 +109,34 @@ func main() {
 		startDate = currentDate
 	}
 
-	recurrenceType := checkRecurrenceType(weekDays, dates, daily, months, weekInterval, datesInterval, dailyInterval, monthInterval)
+	recurrenceType := checkRecurrenceType(weekDays, dates, dates, months, weekInterval, datesInterval, datesInterval, monthInterval)
 	fmt.Println(recurrenceType)
 
 	switch recurrenceType {
 	case "daily":
-		nextDues := dailyFunc.GetDailyDues(hours, minutes, *dailyInterval, startDate, endDate)
+		nextDues := dailyFunc.GetDailyDues(hours, minutes, *datesInterval, startDate, endDate)
 		fmt.Println(nextDues)
 	case "weekly":
-		nextDues := Weekly.GetFirstDueDate(hours, minutes, *weekInterval, startDate, endDate, *weekDays)
+		// Return only the immediate first occurrence of the each given days of the week
+		nextDues := Weekly.GetFirstDueDate(hours, minutes, *weekInterval, startDate, endDate, weekDays)
+		// Below function takes the first occurrence of each given week days and
+		// returns remaining ones at max 10 or till endDate (whichever is smaller)
 		finalDues := Weekly.GetNextDues(*weekInterval, nextDues, endDate)
 
 		fmt.Println(finalDues)
 	case "monthly":
-		nextDues := Monthly.GetFirstDateOccurrence(hours, minutes, *monthInterval, startDate, endDate, *dates)
+		// Return only the immediate first occurrence of the each given dates (monthly interval)
+		nextDues := Monthly.GetFirstDateOccurrence(hours, minutes, *monthInterval, startDate, endDate, dates)
+		// Below function takes the first occurrence of each given dates and
+		// returns remaining ones at max 10 or	till endDate (whichever is smaller)
 		finalDues := Monthly.GetNextDues(*monthInterval, endDate, nextDues)
 
 		fmt.Println(finalDues)
 	case "yearly":
-		nextDues := Yearly.GetFirstDateOccurrence(hours, minutes, *monthInterval, startDate, endDate, *dates, *months)
+		// Return only the immediate first occurrence of the each given dates (yearly interval)
+		nextDues := Yearly.GetFirstDateOccurrence(hours, minutes, *monthInterval, startDate, endDate, dates, months)
+		// Below function takes the first occurrence of each given dates and
+		// returns remaining ones at max 10 or	till endDate (whichever is smaller)
 		finalDues := Yearly.GetNextDues(*monthInterval, endDate, nextDues)
 
 		fmt.Println(finalDues)

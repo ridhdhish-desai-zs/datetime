@@ -11,6 +11,8 @@ func (s timeSlice) Less(i, j int) bool { return s[i].Before(s[j]) }
 func (s timeSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s timeSlice) Len() int           { return len(s) }
 
+// Calculate the first occurrence of given week day and returns that date
+// (only used to find first occurrence)
 func getDate(hrs, mins, day, recurrence, interval int, startDate time.Time) time.Time {
 	wd := map[string]int{
 		"Sunday":    0,
@@ -45,9 +47,11 @@ func getDate(hrs, mins, day, recurrence, interval int, startDate time.Time) time
 	return nextDate
 }
 
+// Return first occurrence of each given week day(s)
 func GetFirstDueDate(hrs, mins, interval int, startDate, endDate time.Time, weekDays []int) timeSlice {
 	var nextDues timeSlice
 
+	// Gets first occurrence of each given week days
 	for _, v := range weekDays {
 		nextDate := getDate(hrs, mins, v, 7, interval, startDate)
 
@@ -62,33 +66,36 @@ func GetFirstDueDate(hrs, mins, interval int, startDate, endDate time.Time, week
 	return nextDues
 }
 
-func GetNextDues(interval int, nextDues timeSlice, endDate time.Time) timeSlice {
+// Returns remaining due dates occurrences (other than first due dates occurrences)
+func GetNextDues(interval int, firstDues timeSlice, endDate time.Time) timeSlice {
 	count := 0
-	var finalDues timeSlice
+	var allDues timeSlice
 
-	finalDues = append(finalDues, nextDues...)
+	allDues = append(allDues, firstDues...)
 
 	for {
 		skip := 0
-		for i := 0; i < len(nextDues); i++ {
-			t := nextDues[i]
-			if count == 13-len(nextDues) {
+		for i := 0; i < len(firstDues); i++ {
+			t := firstDues[i]
+			if count == 13-len(firstDues) {
 				return nil
 			}
 
 			nextDate := t.AddDate(0, 0, 7*interval)
 
+			// Checking for endDate (endDate should be greater than or equal)
+			// if endDate is gte then append that date in slice
 			if endDate.Sub(nextDate) < 0 {
 				skip++
 			} else {
 				count++
-				nextDues[i] = nextDate
-				finalDues = append(finalDues, nextDues[i])
+				firstDues[i] = nextDate
+				allDues = append(allDues, firstDues[i])
 			}
 		}
 
-		if skip == len(nextDues) {
-			return finalDues
+		if skip == len(firstDues) {
+			return allDues
 		}
 	}
 }
