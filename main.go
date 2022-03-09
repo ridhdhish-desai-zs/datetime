@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -89,8 +90,8 @@ func checkRecurrenceType(weekDays, dates, daily, months []int, weekInterval, dat
 func main() {
 	// regex := "00 16 * */10 *" // Daily
 	// regex := "00 16 1,2,6/2 * *" // Weekly
-	// regex := "00 16 * 1 */1" // Monthly
-	regex := "00 00 * 1 4/120" // Yearly
+	regex := "00 16 * (29-31) */1" // Monthly
+	// regex := "00 16 * 28 2/12" // Yearly
 
 	regexParams := strings.Split(regex, " ")
 
@@ -101,12 +102,12 @@ func main() {
 	hours, _ := strconv.Atoi(regexParams[1])
 	minutes, _ := strconv.Atoi(regexParams[0])
 
-	endDate, _ := time.Parse(time.RFC3339, "2032-04-23T10:00:00Z")
-	startDate, _ := time.Parse(time.RFC3339, "2022-02-28T15:00:00Z")
+	endDate, _ := time.Parse(time.RFC3339, "2023-04-23T10:00:00Z")
+	startDate, _ := time.Parse(time.RFC3339, "2022-01-25T15:00:00Z")
 	currentDate, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
 	if currentDate.Sub(startDate) > 0 {
-		startDate = currentDate
+		// startDate = currentDate
 	}
 
 	recurrenceType := checkRecurrenceType(weekDays, dates, dates, months, weekInterval, datesInterval, datesInterval, monthInterval)
@@ -122,7 +123,6 @@ func main() {
 		// Below function takes the first occurrence of each given week days and
 		// returns remaining ones at max 10 or till endDate (whichever is smaller)
 		finalDues := Weekly.GetNextDues(*weekInterval, nextDues, endDate)
-
 		fmt.Println(finalDues)
 	case "monthly":
 		// Return only the immediate first occurrence of the each given dates (monthly interval)
@@ -130,6 +130,7 @@ func main() {
 		// Below function takes the first occurrence of each given dates and
 		// returns remaining ones at max 10 or	till endDate (whichever is smaller)
 		finalDues := Monthly.GetNextDues(*monthInterval, endDate, nextDues)
+		sort.Sort(finalDues)
 
 		fmt.Println(finalDues)
 	case "yearly":
@@ -138,6 +139,7 @@ func main() {
 		// Below function takes the first occurrence of each given dates and
 		// returns remaining ones at max 10 or	till endDate (whichever is smaller)
 		finalDues := Yearly.GetNextDues(*monthInterval, endDate, nextDues)
+		sort.Sort(finalDues)
 
 		fmt.Println(finalDues)
 	}

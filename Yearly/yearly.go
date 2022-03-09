@@ -1,6 +1,8 @@
 package Yearly
 
 import (
+	"fmt"
+	"reflect"
 	"sort"
 	"time"
 
@@ -19,6 +21,21 @@ func GetNextDues(interval int, endDate time.Time, firstDateOccurrence timeSlice)
 	var nextDues timeSlice
 	nextDues = append(nextDues, firstDateOccurrence...)
 
+	monthDays := map[int]int{
+		1:  31,
+		2:  28,
+		3:  31,
+		4:  30,
+		5:  31,
+		6:  30,
+		7:  31,
+		8:  31,
+		9:  30,
+		10: 31,
+		11: 30,
+		12: 31,
+	}
+
 	count := 0
 
 	for {
@@ -29,9 +46,11 @@ func GetNextDues(interval int, endDate time.Time, firstDateOccurrence timeSlice)
 				return nextDues
 			}
 
-			nextDate := t.AddDate(0, interval, 0)
+			day := t.Day()
 
-			if endDate.Sub(nextDate) < 0 {
+			nextDate := Monthly.GetDate(interval, day, monthDays, t, endDate)
+
+			if reflect.DeepEqual(nextDate, time.Time{}) || endDate.Sub(nextDate) < 0 {
 				skip++
 			} else {
 				count++
@@ -46,6 +65,38 @@ func GetNextDues(interval int, endDate time.Time, firstDateOccurrence timeSlice)
 	}
 }
 
+// TODO: create new function for get first occurrences
+// 1. Check for month (occurred, not occurred or same month)
+func getMonthDate(hrs, mins, date, month, interval int, startDate, endDate time.Time) *time.Time {
+	monthDays := map[int]int{
+		1:  31,
+		2:  28,
+		3:  31,
+		4:  30,
+		5:  31,
+		6:  30,
+		7:  31,
+		8:  31,
+		9:  30,
+		10: 31,
+		11: 30,
+		12: 31,
+	}
+
+	diffOfMonths := month - int(startDate.Month())
+	diffOfDays := date - startDate.Day()
+
+	var nextDate *time.Time
+
+	if diffOfMonths == 0 {
+		nextDate = Monthly.GetMonthDate(hrs, mins, date, month, interval, startDate, endDate)
+	} else if diffOfMonths > 0 {
+
+	}
+
+	return nil
+}
+
 // Returns first occurrence
 // Here startDate contains currentDate or given task startDate (whichever is greater)
 func GetFirstDateOccurrence(hrs, mins, interval int, startDate, endDate time.Time, dates, months []int) timeSlice {
@@ -53,6 +104,8 @@ func GetFirstDateOccurrence(hrs, mins, interval int, startDate, endDate time.Tim
 
 	for _, v := range dates {
 		for _, m := range months {
+
+			// FIXME: Don't use month's function
 			nextDate := Monthly.GetMonthDate(hrs, mins, v, m, interval, startDate, endDate)
 
 			if nextDate != nil {
@@ -62,6 +115,8 @@ func GetFirstDateOccurrence(hrs, mins, interval int, startDate, endDate time.Tim
 	}
 
 	sort.Sort(firstDateOccurrence)
+
+	fmt.Println(firstDateOccurrence)
 
 	return firstDateOccurrence
 }
